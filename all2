@@ -1,0 +1,185 @@
+#K-Shingling and Incidence Matrix
+
+import re
+import pandas as pd
+
+k = int(input("Enter K: "))
+files = ["bd1.txt", "bd2.txt", "bd3.txt", "bd4.txt"]
+cols = ["d1", "d2", "d3", "d4"]
+
+sh = []
+
+for f in files:
+    with open(f, "r") as file:
+        text = file.read().lower()
+
+    words = re.sub(r"[^\w\s]", "", text).split()
+    shingles = set()
+
+    for i in range(len(words) - k + 1):
+        shingles.add(" ".join(words[i:i+k]))
+
+    sh.append(shingles)
+
+for i in range(4):
+    print(cols[i], ":", sh[i])
+
+all_sh = sorted(set.union(*sh))
+
+inc = pd.DataFrame(
+    [[int(s in d) for d in sh] for s in all_sh],
+    index=all_sh,
+    columns=cols
+)
+
+print("\nIncidence Matrix:")
+print(inc)
+
+
+
+
+#. Jaccard Set Similarity
+
+import re
+
+k = int(input("Enter K: "))
+files = ["bd1.txt", "bd2.txt", "bd3.txt", "bd4.txt"]
+cols = ["d1", "d2", "d3", "d4"]
+
+sh = []
+
+for f in files:
+    with open(f, "r") as file:
+        text = file.read().lower()
+
+    words = re.sub(r"[^\w\s]", "", text).split()
+    shingles = set()
+
+    for i in range(len(words) - k + 1):
+        shingles.add(" ".join(words[i:i+k]))
+
+    sh.append(shingles)
+
+for i in range(4):
+    print(cols[i], ":", sh[i])
+
+print("\nJaccard Set Similarity:")
+
+for i in range(4):
+    for j in range(i + 1, 4):
+
+        intersection = len(sh[i] & sh[j])
+        union = len(sh[i] | sh[j])
+
+        similarity = intersection / union if union else 1.0
+        print(cols[i], cols[j], ":", round(similarity, 4))
+
+
+
+
+#MinHash Algorithm
+
+import re
+import pandas as pd
+import numpy as np
+
+k = int(input("Enter K: "))
+
+files = ["bd1.txt", "bd2.txt", "bd3.txt", "bd4.txt"]
+cols = ["d1", "d2", "d3", "d4"]
+
+sh = []
+for f in files:
+    with open(f, "r") as file:
+        text = file.read().lower()
+
+    words = re.sub(r"[^\w\s]", "", text).split()
+    shingles = set()
+
+    for i in range(len(words) - k + 1):
+        shingles.add(" ".join(words[i:i+k]))
+    sh.append(shingles)
+
+all_sh = sorted(set.union(*sh))
+
+inc = pd.DataFrame(
+    [[int(s in d) for d in sh] for s in all_sh],
+    index=all_sh,
+    columns=cols
+)
+
+print("\nIncidence Matrix:")
+print(inc)
+
+a = [2, 3, 5]
+b = [11, 13, 3]
+p = 157
+
+sig = np.full((3, 4), np.inf)
+
+for r in range(len(inc)):
+    for d in range(4):
+
+        if inc.iloc[r, d] == 1:
+            for h in range(3):
+                value = (a[h] * r + b[h]) % p
+                sig[h, d] = min(sig[h, d], value)
+
+sig[np.isinf(sig)] = -1
+sig = sig.astype(int)
+
+print("\nSignature Matrix:")
+print(pd.DataFrame(sig, columns=cols))
+
+print("\nEstimated Jaccard Similarity:")
+
+for i in range(4):
+    for j in range(i + 1, 4):
+        if not sh[i] and not sh[j]:
+            similarity = 1.0
+        elif not sh[i] or not sh[j]:
+            similarity = 0.0
+        else:
+            similarity = np.mean(sig[:, i] == sig[:, j])
+
+        print(cols[i], cols[j], ":", round(similarity, 4))
+
+
+
+
+
+#Jaccard bag
+
+import re
+from collections import Counter
+files = ["bd1.txt", "bd2.txt"]
+words = []
+
+for f in files:
+    with open(f, "r") as file:
+        text = file.read().lower()
+    text = re.sub(r"[^\w\s]", "", text)
+    words.append(text.split())
+
+bag1 = Counter(words[0])
+bag2 = Counter(words[1])
+
+print("Bag 1:", bag1)
+print("Bag 2:", bag2)
+
+all_words = set(bag1) | set(bag2)
+intersection = sum(
+    min(bag1[w], bag2[w]) for w in all_words
+)
+
+union = sum(
+    max(bag1[w], bag2[w]) for w in all_words
+)
+
+similarity = intersection / union if union else 1.0
+
+print("Intersection:", intersection)
+print("Union:", union)
+print("Jaccard Bag Similarity:", round(similarity, 4))
+
+
