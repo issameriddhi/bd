@@ -1,0 +1,135 @@
+#pyspark using RDD
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import lit, current_date
+from pyspark.ml.feature import Imputer
+
+spark = SparkSession.builder.appName("Demo").getOrCreate()
+
+df = spark.createDataFrame(
+    [
+        ("James", 3000, 32),
+        ("Anna", 2000, 41),
+        ("Robert", 1000, None),
+        ("Charlie", 5400, 28)
+    ],
+    ["Name", "Salary", "Age"]
+)
+
+df.show()
+df.printSchema()
+
+df = df.withColumn("Bonus", lit(0.3))
+df = df.withColumn("BonusAmount", df.Salary * 0.3)
+df = df.withColumn("CurrentDate", current_date())
+df.show()
+
+df = df.drop("Bonus")
+df.show()
+
+imp = Imputer(
+    inputCols=["Age"],
+    outputCols=["Age"]
+).setStrategy("mean")
+
+df = imp.fit(df).transform(df)
+df.show()
+
+rdd = spark.sparkContext.parallelize([1, 2, 3, 4])
+
+print("Map:", rdd.map(lambda x: x * 2).collect())
+rdd = spark.sparkContext.parallelize(
+    ["hello world", "hello spark"]
+)
+
+print("FlatMap:", rdd.flatMap(lambda x: x.split()).collect())
+
+word = rdd.flatMap(lambda x: x.split())
+pairs = word.map(lambda x: (x, 1))
+counts = pairs.reduceByKey(lambda a, b: a + b)
+
+print("Word Count:", counts.collect())
+
+df = df.withColumn("Salary", df["Salary"].cast("int"))
+
+df.printSchema()
+df.show()
+
+
+
+
+#pyspark using Pipeline,logi
+
+from pyspark.sql import SparkSession
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import Imputer, StringIndexer, OneHotEncoder, VectorAssembler
+from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
+spark = SparkSession.builder.appName("prac").getOrCreate()
+data = spark.read.csv("data.csv", header=True, inferSchema=True)
+
+data.show()
+data.printSchema()
+
+num = ["Age", "Salary"]
+cat = ["Gender"]
+label = "Outcome"
+
+data = data.dropna(subset=["Gender", "Outcome"])
+train, test = data.randomSplit([0.75, 0.25], seed=42)
+
+imp = Imputer(
+    inputCols=num,
+    outputCols=["Age1", "Salary1"]
+).setStrategy("median")
+
+si = StringIndexer(
+    inputCol="Gender",
+    outputCol="Gender1",
+    handleInvalid="keep"
+)
+
+enc = OneHotEncoder(
+    inputCols=["Gender1"],
+    outputCols=["Gender2"],
+    handleInvalid="keep"
+)
+
+li = StringIndexer(
+    inputCol=label,
+    outputCol="label",
+    handleInvalid="keep"
+)
+
+a = VectorAssembler(
+    inputCols=["Age1", "Salary1", "Gender2"],
+    outputCol="features"
+)
+
+lr = LogisticRegression(
+    featuresCol="features",
+    labelCol="label",
+    maxIter=20
+)
+
+stages = [imp, si, enc, li, a, lr]
+
+pipeline = Pipeline(stages=stages)
+model = pipeline.fit(train)
+pred = model.transform(test)
+pred.select(
+    "Age", "Salary", "Gender",
+    "Outcome", "label", "prediction"
+).show()
+
+e = MulticlassClassificationEvaluator(
+    labelCol="label",
+    predictionCol="prediction",
+    metricName="accuracy"
+)
+
+accuracy = e.evaluate(pred)
+print("Accuracy:", accuracy)
+
+
