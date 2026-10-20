@@ -1,0 +1,184 @@
+#Bloom Filter
+from bitarray import bitarray
+import random
+
+size = 512
+
+bloom = bitarray(size)
+bloom.setall(0)
+
+def hashf(num):
+    h1 = num % size
+    h2 = (3*num + 7) % size
+    h3 = (5*num + 11) % size
+    h4 = (7*num + 13) % size
+
+    return [h1, h2, h3, h4]
+
+for i in range(500):
+    num = random.randint(1, 2000)
+    for h in hashf(num):
+        bloom[h] = 1
+
+print("Bloom Filter:", bloom.to01())
+checknum = int(input("Enter number to check: "))
+present = True
+
+for h in hashf(checknum):
+    if bloom[h] == 0:
+        present = False
+        break
+if present:
+    print("Possibly Present")
+else:
+    print("Definitely Not Present")
+
+
+
+#AMS 
+import random
+n = 600
+pos = sorted(random.sample(range(1, n+1), 4))
+
+elem = [None] * 4
+count = [0] * 4
+
+print("Selected Positions:", pos)
+
+for t in range(1, n+1):
+    x = random.randint(1, 100)
+
+    for i in range(4):
+        if t == pos[i]:
+            elem[i] = x
+            count[i] = 1
+
+        elif t > pos[i] and x == elem[i]:
+            count[i] += 1
+
+total = 0
+
+for i in range(4):
+    estimate = n * (2 * count[i] - 1)
+    total += estimate
+
+    print("Position:", pos[i],
+          "| Element:", elem[i],
+          "| Count:", count[i],
+          "| Estimate:", estimate)
+
+print("Final AMS Estimate:", total / 4)
+
+#Flajolet martin
+import random
+
+def hash1(x):
+    return (13*x + 1) % 32
+def hash2(x):
+    return (15*x + 3) % 64
+def hash3(x):
+    return (17*x + 5) % 128
+max1, max2, max3 = 0, 0, 0
+
+print("Index\tX\tH1\tBinary1\tR1\tH2\tBinary2\tR2\tH3\tBinary3\tR3")
+
+for i in range(1, 601):
+
+    x = random.randint(1, 100000)
+    h1 = hash1(x)
+    h2 = hash2(x)
+    h3 = hash3(x)
+
+    b1 = format(h1, "05b")
+    b2 = format(h2, "06b")
+    b3 = format(h3, "07b")
+
+    r1 = len(b1) - len(b1.rstrip("0"))
+    r2 = len(b2) - len(b2.rstrip("0"))
+    r3 = len(b3) - len(b3.rstrip("0"))
+
+    max1 = max(max1, r1)
+    max2 = max(max2, r2)
+    max3 = max(max3, r3)
+
+    print(i, x, h1, b1, r1,
+          h2, b2, r2,
+          h3, b3, r3, sep="\t")
+
+e1 = 2 ** max1
+e2 = 2 ** max2
+e3 = 2 ** max3
+
+print("\nMaximum R1:", max1)
+print("Maximum R2:", max2)
+print("Maximum R3:", max3)
+
+print("\nEstimate 1:", e1)
+print("Estimate 2:", e2)
+print("Estimate 3:", e3)
+
+average = (e1 + e2 + e3) / 3
+print("\nFinal Estimated Distinct Elements:", average)
+
+
+#Adwords prob
+budget = {'a': 10, 'b': 8, 'c': 7, 'd': 7}
+price = {'a': 4, 'b': 2, 'c': 3, 'd': 4}
+
+interested = {
+    'X': ['a', 'b'],
+    'Y': ['a', 'd'],
+    'Z': ['c', 'b'],
+    'W': ['b', 'd']
+}
+
+queries = ['X', 'Y', 'Z', 'W', 'Y', 'Z', 'X', 'Y']
+rev = 0
+
+for q in queries:
+    best = None
+
+    for bidder in interested[q]:
+        if budget[bidder] >= price[bidder]:
+            if best is None or price[bidder] > price[best]:
+                best = bidder
+
+    if best:
+        rev += price[best]
+        budget[best] -= price[best]
+        print(q, "->", best)
+    else:
+        print(q, "-> No Winner")
+
+print("Revenue:", rev)
+print("Remaining Budget:", budget)
+
+#Sum prob
+import math
+
+budget = {"A": 80, "B": 100, "C": 50, "D": 120}
+spent = {"A": 60, "B": 20, "C": 10, "D": 90}
+bids = {"A": 4, "B": 3, "C": 5, "D": 6}
+
+value = {}
+for a in budget:
+    f = 1 - spent[a] / budget[a]
+    w = bids[a] * (1 - math.exp(-f))
+
+    print(a, "| f:", round(f, 3),
+          "| w:", round(w, 3))
+
+    if budget[a] - spent[a] >= bids[a]:
+        value[a] = w
+
+if value:
+    winner = max(value, key=value.get)
+
+    print("Winner:", winner)
+    spent[winner] += bids[winner]
+    print("Updated Spent:", spent)
+else:
+    print("No Eligible Advertiser")
+
+
+
